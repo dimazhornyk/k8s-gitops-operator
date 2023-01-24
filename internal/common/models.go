@@ -1,6 +1,13 @@
 package common
 
-import v1 "k8s.io/api/core/v1"
+import "k8s.io/api/core/v1"
+
+type Scope string
+
+const (
+	Internal Scope = "internal"
+	External Scope = "external"
+)
 
 type RepositoryEvent struct {
 	ID      string       `json:"id"`
@@ -30,9 +37,17 @@ type GCPPermission struct {
 	Role string `json:"role"`
 }
 
+func (s Scope) String() string {
+	return string(s)
+}
+
+func (s Scope) IsValid() bool {
+	return s == Internal || s == External
+}
+
 type Route struct {
 	Name   string `json:"name"`
-	Scope  string `json:"scope"`
+	Scope  Scope  `json:"scope"`
 	Prefix string `json:"prefix"`
 	Port   uint32 `json:"port"`
 }
@@ -40,14 +55,4 @@ type Route struct {
 type Image struct {
 	Repository string `json:"repository"`
 	Tag        string `json:"tag"`
-}
-
-func RoutesToContainerPorts(routes []Route) []v1.ContainerPort {
-	var ports []v1.ContainerPort
-	for _, route := range routes {
-		ports = append(ports, v1.ContainerPort{
-			ContainerPort: int32(route.Port),
-		})
-	}
-	return ports
 }
