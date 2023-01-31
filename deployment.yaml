@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gitops
+  labels:
+    app: gitops
+spec:
+  selector:
+    matchLabels:
+      app: gitops
+  template:
+    metadata:
+      labels:
+        app: gitops
+    spec:
+      serviceAccountName: gitops-operator
+      containers:
+        - name: gitops
+          image: gitops:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080

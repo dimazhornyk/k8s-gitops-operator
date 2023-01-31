@@ -4,10 +4,12 @@ import (
 	"context"
 	"diploma/internal/common"
 	"fmt"
-	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	appsv1 "k8s.io/client-go/applyconfigurations/apps/v1"
+	applycorev1 "k8s.io/client-go/applyconfigurations/core/v1"
+	applymetav1 "k8s.io/client-go/applyconfigurations/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
@@ -35,72 +37,66 @@ func NewKubernetes() (Kubernetes, error) {
 }
 
 func (k k8s) CreateDeployment(conf common.ServiceConfig) error {
-	deployment := &v1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   conf.ServiceName,
-			Labels: map[string]string{"app": conf.ServiceName},
-		},
-		Spec: v1.DeploymentSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"app": conf.ServiceName},
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{"app": conf.ServiceName},
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:  conf.ServiceName,
-							Image: fmt.Sprintf("%s:%s", conf.Image.Repository, conf.Image.Tag),
-							Ports: common.RoutesToContainerPorts(conf.Routes),
-							// TODO: remove for production environment
-							ImagePullPolicy: corev1.PullNever,
-						},
-					},
-				},
-			},
-		},
-	}
-	opts := metav1.CreateOptions{
+	deployment := appsv1.Deployment(conf.ServiceName, "default").
+		WithLabels(map[string]string{"app": conf.ServiceName}).
+		WithSpec(
+			appsv1.DeploymentSpec().
+				WithSelector(
+					applymetav1.LabelSelector().
+						WithMatchLabels(map[string]string{"app": conf.ServiceName})).
+				WithTemplate(
+					applycorev1.PodTemplateSpec().
+						WithLabels(map[string]string{"app": conf.ServiceName}).
+						WithSpec(
+							applycorev1.PodSpec().
+								WithContainers(&applycorev1.ContainerApplyConfiguration{
+									Name:  common.Ptr(conf.ServiceName),
+									Image: common.Ptr(fmt.Sprintf("%s:%s", conf.Image.Repository, conf.Image.Tag)),
+									Ports: common.RoutesToContainerPorts(conf.Routes),
+									// TODO: remove for production environment
+									ImagePullPolicy: common.Ptr(corev1.PullNever),
+								}),
+						),
+				),
+		)
+
+	opts := metav1.ApplyOptions{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Deployment",
 			APIVersion: "apps/v1",
 		},
+		FieldManager: "application/apply-patch",
 	}
 
-	_, err := k.clientset.AppsV1().Deployments("default").Create(context.Background(), deployment, opts)
+	_, err := k.clientset.AppsV1().Deployments("default").Apply(context.Background(), deployment, opts)
 
 	return err
 }
 
 func (k k8s) CreateService(conf common.ServiceConfig) error {
-	ports := make([]corev1.ServicePort, len(conf.Routes))
+	ports := make([]*applycorev1.ServicePortApplyConfiguration, len(conf.Routes))
 	for i, route := range conf.Routes {
-		ports[i] = corev1.ServicePort{
-			Port:       int32(route.Port),
-			TargetPort: intstr.FromInt(int(route.Port)),
+		ports[i] = &applycorev1.ServicePortApplyConfiguration{
+			Port:       common.Ptr(int32(route.Port)),
+			TargetPort: common.Ptr(intstr.FromInt(int(route.Port))),
 		}
 	}
 
-	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: conf.ServiceName,
-		},
-		Spec: corev1.ServiceSpec{
-			Selector: map[string]string{"app": conf.ServiceName},
-			Ports:    ports,
-		},
-	}
+	service := applycorev1.Service(conf.ServiceName, "default").WithSpec(
+		applycorev1.ServiceSpec().
+			WithSelector(map[string]string{"app": conf.ServiceName}).
+			WithPorts(ports...),
+	)
 
-	opts := metav1.CreateOptions{
+	opts := metav1.ApplyOptions{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Service",
 			APIVersion: "v1",
 		},
+		FieldManager: "application/apply-patch",
 	}
 
-	_, err := k.clientset.CoreV1().Services("default").Create(context.Background(), service, opts)
+	_, err := k.clientset.CoreV1().Services("default").Apply(context.Background(), service, opts)
 
 	return err
 }

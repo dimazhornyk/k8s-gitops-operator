@@ -1,15 +1,19 @@
 package common
 
 import (
-	"k8s.io/api/core/v1"
+	"k8s.io/client-go/applyconfigurations/core/v1"
 )
 
-func RoutesToContainerPorts(routes []Route) []v1.ContainerPort {
-	var ports []v1.ContainerPort
+func RoutesToContainerPorts(routes []Route) []v1.ContainerPortApplyConfiguration {
+	var ports []v1.ContainerPortApplyConfiguration
 	for _, route := range routes {
-		ports = append(ports, v1.ContainerPort{
-			ContainerPort: int32(route.Port),
+		ports = append(ports, v1.ContainerPortApplyConfiguration{
+			ContainerPort: Ptr(int32(route.Port)),
 		})
 	}
 	return ports
+}
+
+func Ptr[T any](val T) *T {
+	return &val
 }

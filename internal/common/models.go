@@ -23,7 +23,7 @@ type EventPayload struct {
 type ServiceConfig struct {
 	ServiceName string       `json:"name"`
 	Image       Image        `json:"image"`
-	ExtraEnv    v1.EnvVar    `json:"extraEnv,omitempty"`
+	ExtraEnv    []v1.EnvVar  `json:"extraEnv,omitempty"`
 	Routes      []Route      `json:"routes,omitempty"`
 	Permissions []Permission `json:"permissions,omitempty"`
 }
@@ -46,10 +46,9 @@ func (s Scope) IsValid() bool {
 }
 
 type Route struct {
-	Name   string `json:"name"`
-	Scope  Scope  `json:"scope"`
-	Prefix string `json:"prefix"`
-	Port   uint32 `json:"port"`
+	Name  string `json:"name"`
+	Scope Scope  `json:"scope"`
+	Port  uint32 `json:"port"`
 }
 
 type Image struct {

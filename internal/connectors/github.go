@@ -2,9 +2,12 @@ package connectors
 
 import (
 	"diploma/internal/common"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -37,7 +40,15 @@ func (g github) GetFile(repo, path string) ([]byte, error) {
 		return nil, err
 	}
 
-	return b, nil
+	var data map[string]interface{}
+	if err := json.Unmarshal(b, &data); err != nil {
+		return nil, err
+	}
+
+	content := data["content"].(string)
+	r := base64.NewDecoder(base64.StdEncoding, strings.NewReader(content))
+
+	return io.ReadAll(r)
 }
 
 func (g github) doRequest(url string) (*http.Response, error) {
