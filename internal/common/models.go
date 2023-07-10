@@ -21,14 +21,14 @@ type EventPayload struct {
 }
 
 type ServiceConfig struct {
-	ServiceName string       `json:"name"`
-	Image       Image        `json:"image"`
-	ExtraEnv    []v1.EnvVar  `json:"extraEnv,omitempty"`
-	Routes      []Route      `json:"routes,omitempty"`
-	Permissions []Permission `json:"permissions,omitempty"`
+	ServiceName string      `json:"name"`
+	Image       Image       `json:"image"`
+	ExtraEnv    []v1.EnvVar `json:"extraEnv,omitempty"`
+	Routes      []Route     `json:"routes,omitempty"`
+	Permissions Permissions `json:"permissions,omitempty"`
 }
 
-type Permission struct {
+type Permissions struct {
 	GCP []GCPPermission `json:"gcp"`
 }
 

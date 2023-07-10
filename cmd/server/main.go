@@ -49,6 +49,9 @@ func buildContainer() (*dig.Container, error) {
 	if err := c.Provide(connectors.NewStorage); err != nil {
 		return nil, err
 	}
+	if err := c.Provide(connectors.NewGCP); err != nil {
+		return nil, err
+	}
 	if err := c.Provide(logic.NewService); err != nil {
 		return nil, err
 	}

@@ -55,7 +55,7 @@ func (k k8s) CreateDeployment(conf common.ServiceConfig) error {
 									Ports: common.RoutesToContainerPorts(conf.Routes),
 									// TODO: remove for production environment
 									ImagePullPolicy: common.Ptr(corev1.PullNever),
-								}),
+								}).WithServiceAccountName(conf.ServiceName),
 						),
 				),
 		)
@@ -76,6 +76,10 @@ func (k k8s) CreateDeployment(conf common.ServiceConfig) error {
 func (k k8s) CreateService(conf common.ServiceConfig) error {
 	ports := make([]*applycorev1.ServicePortApplyConfiguration, len(conf.Routes))
 	for i, route := range conf.Routes {
+		if route.Scope != common.Internal {
+			continue
+		}
+
 		ports[i] = &applycorev1.ServicePortApplyConfiguration{
 			Port:       common.Ptr(int32(route.Port)),
 			TargetPort: common.Ptr(intstr.FromInt(int(route.Port))),
@@ -97,6 +101,25 @@ func (k k8s) CreateService(conf common.ServiceConfig) error {
 	}
 
 	_, err := k.clientset.CoreV1().Services("default").Apply(context.Background(), service, opts)
+
+	return err
+}
+
+func (k k8s) CreateServiceAccount(conf common.ServiceConfig, serviceAccountEmail string) error {
+	serviceAcc := applycorev1.ServiceAccount(conf.ServiceName, "default").
+		WithAnnotations(map[string]string{
+			"iam.gke.io/gcp-service-account": serviceAccountEmail,
+		})
+
+	opts := metav1.ApplyOptions{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ServiceAccount",
+			APIVersion: "v1",
+		},
+		FieldManager: "application/apply-patch",
+	}
+
+	_, err := k.clientset.CoreV1().ServiceAccounts("default").Apply(context.Background(), serviceAcc, opts)
 
 	return err
 }

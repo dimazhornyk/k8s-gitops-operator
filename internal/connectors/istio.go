@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	networkingv1alpha3 "istio.io/api/networking/v1alpha3"
-	"istio.io/client-go/pkg/apis/networking/v1alpha3"
 	clientnetworking "istio.io/client-go/pkg/applyconfiguration/networking/v1alpha3"
 	"istio.io/client-go/pkg/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -97,58 +96,3 @@ func (i istio) CreateVirtualService(config common.ServiceConfig) error {
 
 	return nil
 }
-
-func (i istio) CreateGateway() error {
-	gw := &v1alpha3.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "istio-gateway",
-		},
-
-		Spec: networkingv1alpha3.Gateway{
-			Selector: map[string]string{
-				"istio": "ingressgateway",
-			},
-			Servers: []*networkingv1alpha3.Server{
-				{
-					Port: &networkingv1alpha3.Port{
-						Number:   80,
-						Protocol: "HTTP",
-						Name:     "http",
-					},
-					Hosts: []string{
-						"*",
-					},
-				},
-			},
-		},
-	}
-
-	opts := metav1.CreateOptions{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Gateway",
-			APIVersion: "networking.istio.io/v1alpha3",
-		},
-	}
-
-	_, err := i.clientset.NetworkingV1alpha3().Gateways("default").Create(context.Background(), gw, opts)
-	if err != nil {
-		return errors.Wrap(err, "Failed to create istio gateway")
-	}
-
-	return nil
-}
-
-//func (i istio) DeleteVirtualService(config common.ServiceConfig) error {
-//	opts := metav1.DeleteOptions{
-//		TypeMeta: metav1.TypeMeta{
-//			Kind:       "VirtualService",
-//			APIVersion: "networking.istio.io/v1alpha3",
-//		},
-//	}
-//
-//	if err := i.clientset.NetworkingV1alpha3().VirtualServices("default").Delete(context.Background(), config.ServiceName, opts); err != nil {
-//		i.logger.WithError(err).Info("error deleting a virtual service")
-//	}
-//
-//	return nil
-//}

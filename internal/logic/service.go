@@ -14,15 +14,17 @@ import (
 
 type service struct {
 	k8s     connectors.Kubernetes
+	gcp     connectors.GCP
 	github  connectors.Github
 	istio   connectors.Istio
 	storage connectors.Storage
 	logger  *logrus.Entry
 }
 
-func NewService(k8s connectors.Kubernetes, istio connectors.Istio, github connectors.Github, storage connectors.Storage, logger *logrus.Entry) Service {
+func NewService(k8s connectors.Kubernetes, istio connectors.Istio, gcp connectors.GCP, github connectors.Github, storage connectors.Storage, logger *logrus.Entry) Service {
 	return &service{
 		k8s:     k8s,
+		gcp:     gcp,
 		istio:   istio,
 		github:  github,
 		storage: storage,
@@ -31,10 +33,6 @@ func NewService(k8s connectors.Kubernetes, istio connectors.Istio, github connec
 }
 
 func (s service) Start() error {
-	//if err := s.istio.CreateGateway(); err != nil {
-	//	s.logger.Info("skip creating gateway")
-	//}
-
 	http.HandleFunc("/", s.handleGithubWebhook)
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		return errors.Wrap(err, "failed to start server")
@@ -66,6 +64,15 @@ func (s service) handleConfigChange(repoFullname string) error {
 	var conf common.ServiceConfig
 	if err := yaml.Unmarshal(b, &conf); err != nil {
 		return errors.Wrap(err, "failed to unmarshal file")
+	}
+
+	sa, err := s.gcp.CreateServiceAccount(conf)
+	if err != nil {
+		return errors.Wrap(err, "failed to create a GCP service account")
+	}
+
+	if err := s.k8s.CreateServiceAccount(conf, sa.Email); err != nil {
+		return errors.Wrap(err, "failed to create a k8s service account")
 	}
 
 	if err := s.k8s.CreateDeployment(conf); err != nil {
