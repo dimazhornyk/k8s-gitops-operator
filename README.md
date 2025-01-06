@@ -5,7 +5,7 @@ Uses Istio for traffic management, GitHub as the source of truth, and interacts 
 GCP is used as a cloud provider, but it's mostly for a reference and can be easily replaced with any other cloud provider.
 
 For this to work, the repositories managed by this operator need to have a webhook configured to send events to the operator's endpoint.
-Their rood directory should contain an `ops.yaml` file with the following structure:
+Their root directory should contain an `ops.yaml` file with the following structure:
 
 ```yaml
 name: test-service
